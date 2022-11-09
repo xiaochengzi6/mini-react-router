@@ -318,6 +318,7 @@ export function matchRoutes<
   let location =
     typeof locationArg === "string" ? parsePath(locationArg) : locationArg;
 
+  // location.pathname 要包含于 basename  
   let pathname = stripBasename(location.pathname || "/", basename);
 
   if (pathname == null) {
@@ -325,6 +326,7 @@ export function matchRoutes<
   }
 
   let branches = flattenRoutes(routes);
+  // 这里对 branches 数组进行排序，分数高的会被优先放置
   rankRouteBranches(branches);
 
   let matches = null;
@@ -337,6 +339,7 @@ export function matchRoutes<
       // encoded here but there also shouldn't be anything to decode so this
       // should be a safe operation.  This avoids needing matchRoutes to be
       // history-aware.
+      // 这里传入当前 locations 的 pathname
       safelyDecodeURI(pathname)
     );
   }
@@ -385,16 +388,21 @@ function flattenRoutes<
           `must start with the combined path of all its parent routes.`
       );
 
+      // 将返回剩下的 relativePath 目的：排除parentPath
       meta.relativePath = meta.relativePath.slice(parentPath.length);
     }
 
+    // 将这两者拼接再一起然后再过滤掉 // 
     let path = joinPaths([parentPath, meta.relativePath]);
+    // 存储
     let routesMeta = parentsMeta.concat(meta);
 
     // Add the children before adding this route to the array so we traverse the
     // route tree depth-first and child routes appear before their parents in
     // the "flattened" version.
+    // 遍历路由是深度优先的 所以子路由要提前处理放到下一个路由的前面
     if (route.children && route.children.length > 0) {
+      // 当路由存在子路由时，index === true 
       invariant(
         // Our types know better, but runtime JS may not!
         // @ts-expect-error
@@ -403,11 +411,13 @@ function flattenRoutes<
           `all child routes from route path "${path}".`
       );
 
+      // 递归调用
       flattenRoutes(route.children, branches, routesMeta, path);
     }
 
     // Routes without a path shouldn't ever match by themselves unless they are
     // index routes, so don't add them to the list of possible branches.
+    //  没有路径的路由不应该自己匹配除非他们是具有 index 的路由
     if (route.path == null && !route.index) {
       return;
     }
@@ -418,6 +428,7 @@ function flattenRoutes<
   return branches;
 }
 
+// 对 路由进行排序 分数高的会优先放在最前面
 function rankRouteBranches(branches: RouteBranch[]): void {
   branches.sort((a, b) =>
     a.score !== b.score
@@ -437,8 +448,10 @@ const staticSegmentValue = 10;
 const splatPenalty = -2;
 const isSplat = (s: string) => s === "*";
 
+// 计算传入 path 的分值
 function computeScore(path: string, index: boolean | undefined): number {
-  let segments = path.split("/");
+  // 将字符串 拆分成数组
+  let segments = path.split("/"); 
   let initialScore = segments.length;
   if (segments.some(isSplat)) {
     initialScore += splatPenalty;
@@ -471,9 +484,11 @@ function compareIndexes(a: number[], b: number[]): number {
       // first. This allows people to have fine-grained control over the matching
       // behavior by simply putting routes with identical paths in the order they
       // want them tried.
+      // 兄弟路由 则要按照他们顺序的排列，这里是取出最后一个值相减
       a[a.length - 1] - b[b.length - 1]
     : // Otherwise, it doesn't really make sense to rank non-siblings by index,
       // so they sort equally.
+      // === 0 位置保持不变
       0;
 }
 
@@ -713,6 +728,7 @@ function compilePath(
 
 function safelyDecodeURI(value: string) {
   try {
+    // 对一个编码后的 url 经行解码
     return decodeURI(value);
   } catch (error) {
     warning(
@@ -721,7 +737,7 @@ function safelyDecodeURI(value: string) {
         `malformed URL segment. This is probably due to a bad percent ` +
         `encoding (${error}).`
     );
-
+    // 出现异常就返回最初值
     return value;
   }
 }
@@ -992,6 +1008,7 @@ export function getToPathname(to: To): string | undefined {
 
 /**
  * @private
+ * 将数组中 含有 // 全部替换成 /
  */
 export const joinPaths = (paths: string[]): string =>
   paths.join("/").replace(/\/\/+/g, "/");

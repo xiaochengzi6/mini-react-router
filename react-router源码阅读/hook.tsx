@@ -379,11 +379,14 @@ export function useRoutes(
   }
 
   let pathname = location.pathname || "/";
+
+  // 获得当前路由的路径
   let remainingPathname =
     parentPathnameBase === "/"
       ? pathname
       : pathname.slice(parentPathnameBase.length) || "/";
 
+  // 这个非常关键
   let matches = matchRoutes(routes, { pathname: remainingPathname });
 
   if (__DEV__) {
