@@ -302,11 +302,12 @@ export function convertRoutesToDataRoutes(
     }
   });
 }
-
 /**
- * Matches the given routes to a location and returns the match data.
- *
- * @see https://reactrouter.com/docs/en/v6/utils/match-routes
+ * 传入 routes 的数组 和 由当前 pathname 路径 的location 
+ * 首先是会对 routes 处理，对齐进行扁平化以及附加权重并对其排序
+ * 根据传入的 pathname 组成的 location 再取出 pathname 在排除根路径 basename 
+ * 最后得到应该要匹配的路径，然后对处理过后的 routes 分别于 pathname 传入 matchRouteBranch
+ * 
  */
 export function matchRoutes<
   RouteObjectType extends AgnosticRouteObject = AgnosticRouteObject
@@ -501,7 +502,16 @@ function compareIndexes(a: number[], b: number[]): number {
       // === 0 位置保持不变
       0;
 }
-
+/**
+ * 接收一个处理好的 routes 中的一个(branch) 和一个当前要匹配的路径
+ * 取出 branch 中的 routesMeta 这里是存储了当前路径对象以及父路径路由
+ * routesMeta 数组最后一个是自己的数组，前面的全部是 parentRoute 
+ * 
+ * 
+ * @param branch 
+ * @param pathname 
+ * @returns 
+ */
 function matchRouteBranch<
   ParamKey extends string = string,
   RouteObjectType extends AgnosticRouteObject = AgnosticRouteObject
@@ -514,16 +524,19 @@ function matchRouteBranch<
   let matchedParams = {};
   let matchedPathname = "/";
   let matches: AgnosticRouteMatch<ParamKey, RouteObjectType>[] = [];
+  // 遍历 routesMeta 数组 
   for (let i = 0; i < routesMeta.length; ++i) {
     let meta = routesMeta[i];
+    // 判断是否是最后一个元素
     let end = i === routesMeta.length - 1;
 
-    // 匹配相对路由的剩余值
+    // 匹配相对路由的剩余值 也就是过滤掉匹配过的父 pathname 的剩余值
     let remainingPathname =
       matchedPathname === "/"
         ? pathname
         : pathname.slice(matchedPathname.length) || "/";
     
+    // 开始单个路由的匹配
     let match = matchPath(
       { path: meta.relativePath, caseSensitive: meta.caseSensitive, end },
       remainingPathname
@@ -535,6 +548,7 @@ function matchRouteBranch<
 
     let route = meta.route;
 
+    // 保存
     matches.push({
       // TODO: Can this as be avoided?
       params: matchedParams as Params<ParamKey>,
@@ -546,6 +560,9 @@ function matchRouteBranch<
     });
 
     if (match.pathnameBase !== "/") {
+      // matchedPathname 刚开始默认为 / 之后和 路由的父路由结合在一起
+      // 这里要和 remainingPathname 变量一起看
+      // 因为是在处理 routesMeta 它的层级是逐级递增的所以就会每一次匹配都要去排除上一次的父路由路径
       matchedPathname = joinPaths([matchedPathname, match.pathnameBase]);
     }
   }
@@ -631,10 +648,13 @@ type Mutable<T> = {
 };
 
 /**
- * Performs pattern matching on a URL pathname and returns information about
- * the match.
- *
- * @see https://reactrouter.com/docs/en/v6/utils/match-path
+ * 这里的就是传入 处理每一个 branch 并处理其中的 routesMeta 数组
+ * 这里存储的是所有的父路由，去遍历这个数组 传入 routesMeta中的一个父路由，以及路径(父路径)
+ * 用传入的路由的 path 去构建出 正则规则 在使用 这个正则规则去匹配传入的路径
+ * 
+ * @param pattern 传入单个路由 
+ * @param pathname 以及要匹配的路径
+ * @returns 
  */
 export function matchPath<
   ParamKey extends ParamParseKey<Path>,
@@ -647,18 +667,27 @@ export function matchPath<
     pattern = { path: pattern, caseSensitive: false, end: true };
   }
 
+  // 构建通过传入的路由来构建正则
   let [matcher, paramNames] = compilePath(
     pattern.path,
     pattern.caseSensitive,
     pattern.end
   );
 
+  // 去匹配 
   let match = pathname.match(matcher);
+  // 没有就说明不符合此路由就会返回
   if (!match) return null;
 
+  // 如果匹配上就会返回 ['匹配到值',,,, index(索引), input, groups] 
+
+  // 取到匹配到的值
   let matchedPathname = match[0];
+  // 将路径中 '/' 之前的字符 将其作为 pathnameBase 
   let pathnameBase = matchedPathname.replace(/(.)\/+$/, "$1");
   let captureGroups = match.slice(1);
+  
+  // 取出剩余匹配的值，动态参数 * 和 :id 
   let params: Params = paramNames.reduce<Mutable<Params>>(
     (memo, paramName, index) => {
       // We need to compute the pathnameBase here using the raw splat value
@@ -670,6 +699,7 @@ export function matchPath<
           .replace(/(.)\/+$/, "$1");
       }
 
+      // 进行解码
       memo[paramName] = safelyDecodeURIComponent(
         captureGroups[index] || "",
         paramName
@@ -686,12 +716,20 @@ export function matchPath<
     pattern,
   };
 }
-
+/**
+ * 解析 path 获得其 reg 规则
+ * 返回处理好的正则规则以及 路径中 ':' 后的字符
+ * @param path 
+ * @param caseSensitive 是否兼容大小写
+ * @param end 是否匹配到末尾位置
+ * @returns 
+ */
 function compilePath(
   path: string,
   caseSensitive = false,
-  end = true
+  end = true 
 ): [RegExp, string[]] {
+  // 当 匹配的路径含有 /foo* 就会报错
   warning(
     path === "*" || !path.endsWith("*") || path.endsWith("/*"),
     `Route path "${path}" will be treated as if it were ` +
@@ -701,25 +739,28 @@ function compilePath(
   );
 
   let paramNames: string[] = [];
+  // 处理 path 排除一个特殊符号的路径
   let regexpSource =
     "^" +
     path
-      .replace(/\/*\*?$/, "") // Ignore trailing / and /*, we'll handle it below
+      .replace(/\/*\*?$/, "") // 排除 path 中 /xxxx**** 这样的路径
       .replace(/^\/*/, "/") // Make sure it has a leading /
-      .replace(/[\\.*+^$?{}|()[\]]/g, "\\$&") // Escape special regex chars
+      .replace(/[\\.*+^$?{}|()[\]]/g, "\\$&") // 将特殊符号分割 'dadsd^sa.dasda' ==> 'dadsd\\^sa\\.dasda'
       .replace(/:(\w+)/g, (_: string, paramName: string) => {
         paramNames.push(paramName);
         return "([^\\/]+)";
       });
-
+      // 这里会取出 ':' 后面的字符 并将其保存在 paramNames 数组中，原来的字符串':'位置就会使用 `([^\\/]+)`代替
+  // 这里要去查看字符最后一个是否是 *
   if (path.endsWith("*")) {
     paramNames.push("*");
     regexpSource +=
       path === "*" || path === "/*"
         ? "(.*)$" // Already matched the initial /, just match the rest
-        : "(?:\\/(.+)|\\/*)$"; // Don't include the / in params["*"]
+        : "(?:\\/(.+)|\\/*)$"; // https://regex-vis.com/?r=%28%3F%3A%5C%5C%2F%28.%2B%29%7C%5C%5C%2F*%29%24
   } else if (end) {
     // When matching to the end, ignore trailing slashes
+    // 当匹配的是最后一个路由时候
     regexpSource += "\\/*$";
   } else if (path !== "" && path !== "/") {
     // If our path is non-empty and contains anything beyond an initial slash,
@@ -729,13 +770,14 @@ function compilePath(
     // of the path (if we've matched to the end).  We used to do this with a
     // word boundary but that gives false positives on routes like
     // /user-preferences since `-` counts as a word boundary.
+    // 这里应该是去找到那些字符边界
     regexpSource += "(?:(?=\\/|$))";
   } else {
     // Nothing to match for "" or "/"
   }
-
+  // 构建 正则 
   let matcher = new RegExp(regexpSource, caseSensitive ? undefined : "i");
-
+  // 返回正则 以及之前 path ':' 后的字符
   return [matcher, paramNames];
 }
 
