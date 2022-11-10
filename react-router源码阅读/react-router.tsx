@@ -563,7 +563,7 @@ export function createRoutesFromChildren(
       return;
     }
 
-    // 支持 <></>
+    // 支持 <></> 后续操作不在执行
     if (element.type === React.Fragment) {
       // Transparently support React.Fragment and its children.
       routes.push.apply(
@@ -573,19 +573,23 @@ export function createRoutesFromChildren(
       return;
     }
 
+    // 不能传入除了 Route 组件以外的组件 
     invariant(
       element.type === Route,
       `[${
         typeof element.type === "string" ? element.type : element.type.name
       }] is not a <Route> component. All component children of <Routes> must be a <Route> or <React.Fragment>`
     );
-
+    
+    // Routes包裹的组件 Route 如果是索引路由，且索引路由不应该有子元素
     invariant(
       !element.props.index || !element.props.children,
       "An index route cannot have child routes."
     );
 
+    // 记录现在的深度
     let treePath = [...parentPath, index];
+    // 获取所有 Route 上组件的 props 将其保存为对象格式
     let route: RouteObject = {
       id: element.props.id || treePath.join("-"),
       caseSensitive: element.props.caseSensitive,
@@ -600,6 +604,7 @@ export function createRoutesFromChildren(
       handle: element.props.handle,
     };
 
+    // 如果存在 children 就会保存在 route 上
     if (element.props.children) {
       route.children = createRoutesFromChildren(
         element.props.children,
@@ -609,6 +614,17 @@ export function createRoutesFromChildren(
 
     routes.push(route);
   });
+
+  /**
+   * 这样最终 在 Routes 组件下使用 Route 所有的都会被维护在一个对象
+   * 
+   * {
+   *   id: 
+   *   xxx: xxx 
+   *   children: React.Element 
+   * }
+   * 
+   */
 
   return routes;
 }

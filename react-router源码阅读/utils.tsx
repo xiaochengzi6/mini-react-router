@@ -318,19 +318,21 @@ export function matchRoutes<
   let location =
     typeof locationArg === "string" ? parsePath(locationArg) : locationArg;
 
-  // location.pathname 要包含于 basename  
+  // 抽离 basename，获取纯粹的 pathname [前天条件: location.pathname 要包含于 basename]
   let pathname = stripBasename(location.pathname || "/", basename);
 
   if (pathname == null) {
     return null;
   }
-
+  // 扁平化 routes 并附带 权重值 
   let branches = flattenRoutes(routes);
-  // 这里对 branches 数组进行排序，分数高的会被优先放置
+  // 这里对 branches 数组进行排序，权重高的会放在前面，
   rankRouteBranches(branches);
 
   let matches = null;
   for (let i = 0; matches == null && i < branches.length; ++i) {
+    // 权重高的放置了前面 会被优先匹配， 匹配到了就会停止匹配
+    // 遍历扁平化的 routes，查看每个 branch 的路径匹配规则是否能匹配到 pathname
     matches = matchRouteBranch<string, RouteObjectType>(
       branches[i],
       // Incoming pathnames are generally encoded from either window.location
@@ -367,12 +369,15 @@ interface RouteBranch<
 function flattenRoutes<
   RouteObjectType extends AgnosticRouteObject = AgnosticRouteObject
 >(
+  // 要打平的数据
   routes: RouteObjectType[],
+  // 下面值会在 递归时候使用
   branches: RouteBranch<RouteObjectType>[] = [],
   parentsMeta: RouteMeta<RouteObjectType>[] = [],
   parentPath = ""
 ): RouteBranch<RouteObjectType>[] {
   routes.forEach((route, index) => {
+    // 将每一个 route 对象 都转换成 mete 
     let meta: RouteMeta<RouteObjectType> = {
       relativePath: route.path || "",
       caseSensitive: route.caseSensitive === true,
@@ -380,6 +385,7 @@ function flattenRoutes<
       route,
     };
 
+    // 如果 route 以 / 开头，那么它应该完全包含父 route 的 path，否则报错
     if (meta.relativePath.startsWith("/")) {
       invariant(
         meta.relativePath.startsWith(parentPath),
@@ -388,40 +394,44 @@ function flattenRoutes<
           `must start with the combined path of all its parent routes.`
       );
 
-      // 将返回剩下的 relativePath 目的：排除parentPath
+      // 把父路由的前缀去除，返回相对路径
       meta.relativePath = meta.relativePath.slice(parentPath.length);
     }
 
-    // 将这两者拼接再一起然后再过滤掉 // 
+    // 完整的 path，合并了父路由的 path 并然后再过滤掉 '//'
     let path = joinPaths([parentPath, meta.relativePath]);
-    // 存储
+    
+    // 存储 meta 对象
     let routesMeta = parentsMeta.concat(meta);
 
-    // Add the children before adding this route to the array so we traverse the
-    // route tree depth-first and child routes appear before their parents in
-    // the "flattened" version.
+ 
     // 遍历路由是深度优先的 所以子路由要提前处理放到下一个路由的前面
     if (route.children && route.children.length > 0) {
-      // 当路由存在子路由时，index === true 
+      // 当index === true 路由不应该存在子路由时 [索引路由]
       invariant(
-        // Our types know better, but runtime JS may not!
         // @ts-expect-error
         route.index !== true,
         `Index routes must not have child routes. Please remove ` +
           `all child routes from route path "${path}".`
       );
 
-      // 递归调用
+      // 递归调用 [会将子路由放置在父路由的前面, 深度优先]
       flattenRoutes(route.children, branches, routesMeta, path);
     }
 
-    // Routes without a path shouldn't ever match by themselves unless they are
-    // index routes, so don't add them to the list of possible branches.
-    //  没有路径的路由不应该自己匹配除非他们是具有 index 的路由
+    //  没有路径的路由（布局路由）不参与路由匹配，除非它是索引路由
+    /* 
+      注意：递归是在前面进行的，也就是说布局路由的子路由是会参与匹配的
+      而子路由会有布局路由的路由信息，这也是布局路由能正常渲染的原因。
+    */
     if (route.path == null && !route.index) {
       return;
     }
 
+    // 当前的 router 对象被处理最终的结果保存在 branches 中
+    // path: 当前的完整路径
+    // score: 权重 
+    // routesMeta: 当前的 meta（由route产生）和父 meta
     branches.push({ path, score: computeScore(path, route.index), routesMeta });
   });
 
@@ -507,10 +517,13 @@ function matchRouteBranch<
   for (let i = 0; i < routesMeta.length; ++i) {
     let meta = routesMeta[i];
     let end = i === routesMeta.length - 1;
+
+    // 匹配相对路由的剩余值
     let remainingPathname =
       matchedPathname === "/"
         ? pathname
         : pathname.slice(matchedPathname.length) || "/";
+    
     let match = matchPath(
       { path: meta.relativePath, caseSensitive: meta.caseSensitive, end },
       remainingPathname

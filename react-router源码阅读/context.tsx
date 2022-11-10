@@ -143,7 +143,7 @@ export interface RouteContextObject {
   outlet: React.ReactElement | null;
   matches: RouteMatch[];
 }
-
+// 存储 所有匹配的路由
 export const RouteContext = React.createContext<RouteContextObject>({
   outlet: null,
   matches: [],

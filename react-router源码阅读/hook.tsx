@@ -303,20 +303,26 @@ export function useRoutes(
   routes: RouteObject[],
   locationArg?: Partial<Location> | string
 ): React.ReactElement | null {
+  // 使用 useRoutes 外层必须有 Router 包裹 
   invariant(
     useInRouterContext(),
     // TODO: This error is probably because they somehow have 2 versions of the
     // router loaded. We can help them understand how to avoid that.
     `useRoutes() may be used only in the context of a <Router> component.`
   );
-
+  // 取出 dataRouterState  
   let dataRouterStateContext = React.useContext(DataRouterStateContext);
+  // 取出已经处理好的 matches 或者使默认值 [] (这里 matches 是存储了所有的路由)
   let { matches: parentMatches } = React.useContext(RouteContext);
-  // 取出最后一个
+  // 取出最后一个 也就是 会将其作为 父路由 (因为在处理 Route 时会保存在数组中然后会对其做一次排序，分数越高在最后)
   let routeMatch = parentMatches[parentMatches.length - 1];
   // 拿到 params, pathname, pathnameBase, route
+
+  // 取出 父路由的参数 通常使用 useRoutes() 调用
   let parentParams = routeMatch ? routeMatch.params : {};
+  // 父路由的完整 路径 比如 /foo/* 匹配 /foo/bar 
   let parentPathname = routeMatch ? routeMatch.pathname : "/";
+  // 父路由的 根路径 /foo
   let parentPathnameBase = routeMatch ? routeMatch.pathnameBase : "/";
   let parentRoute = routeMatch && routeMatch.route;
 
@@ -363,6 +369,7 @@ export function useRoutes(
     let parsedLocationArg =
       typeof locationArg === "string" ? parsePath(locationArg) : locationArg;
 
+    // 如果传入了 location，判断是否与父级路由匹配（作为子路由存在）
     invariant(
       parentPathnameBase === "/" ||
       /*如果 parentPathnameBase !== '/' 还要判断当前的 pathname 是否包含于 parentPathnameBase*/
@@ -375,26 +382,29 @@ export function useRoutes(
 
     location = parsedLocationArg;
   } else {
+    // 如果没有传入 location 那就使用当前的 location
     location = locationFromContext;
   }
 
   let pathname = location.pathname || "/";
 
-  // 获得当前路由的路径
+  // 获得当前路由的路径[本次 routes 要匹配的 pathname]
   let remainingPathname =
     parentPathnameBase === "/"
       ? pathname
       : pathname.slice(parentPathnameBase.length) || "/";
 
   // 这个非常关键
+  // 传入对应的 routes 和 当前对应的路径
   let matches = matchRoutes(routes, { pathname: remainingPathname });
 
   if (__DEV__) {
+    // parentRoute 不存在 
     warning(
       parentRoute || matches != null,
       `No routes matched location "${location.pathname}${location.search}${location.hash}" `
     );
-
+    // 匹配值为空的情况
     warning(
       matches == null ||
         matches[matches.length - 1].route.element !== undefined,
@@ -403,6 +413,7 @@ export function useRoutes(
     );
   }
 
+  // 返回的是 React.Element，渲染所有的 matches 对象
   let renderedMatches = _renderMatches(
     matches &&
       matches.map((match) =>
@@ -415,7 +426,9 @@ export function useRoutes(
               : joinPaths([parentPathnameBase, match.pathnameBase]),
         })
       ),
+    // 父路由匹配的返回的 matches 
     parentMatches,
+    // --???--
     dataRouterStateContext || undefined
   );
 
