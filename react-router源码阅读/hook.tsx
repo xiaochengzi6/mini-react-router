@@ -588,7 +588,9 @@ export function _renderMatches(
   parentMatches: RouteMatch[] = [],
   dataRouterState?: RemixRouter["state"]
 ): React.ReactElement | null {
+  // 判断 matches 是否为 null 
   if (matches == null) {
+    // 如果 data RouterState 存在，就会取出它的值
     if (dataRouterState?.errors) {
       // Don't bail if we have data router errors so we can render them in the
       // boundary.  Use the pre-matched (or shimmed) matches
@@ -601,6 +603,7 @@ export function _renderMatches(
   let renderedMatches = matches;
 
   // If we have data errors, trim matches to the highest error boundary
+  // 取出 dataRouterState 的值 如果 查找到的 matches 中 的 id 和它相等 那就去分割 matches 
   let errors = dataRouterState?.errors;
   if (errors != null) {
     let errorIndex = renderedMatches.findIndex(
@@ -610,6 +613,7 @@ export function _renderMatches(
       errorIndex >= 0,
       `Could not find a matching route for the current errors: ${errors}`
     );
+    // errorIndex 之后的 路由全部舍弃
     renderedMatches = renderedMatches.slice(
       0,
       Math.min(renderedMatches.length, errorIndex + 1)

@@ -667,7 +667,7 @@ export function matchPath<
     pattern = { path: pattern, caseSensitive: false, end: true };
   }
 
-  // 构建通过传入的路由来构建正则
+  // 构建通过传入的路由来构建正则表达式，并返回 paramNames 数组，这个数组存有动态参数和 *
   let [matcher, paramNames] = compilePath(
     pattern.path,
     pattern.caseSensitive,
@@ -699,7 +699,7 @@ export function matchPath<
           .replace(/(.)\/+$/, "$1");
       }
 
-      // 进行解码
+      // 将动态参数以及匹配的值captureGroups[index]传入函数内进行解码
       memo[paramName] = safelyDecodeURIComponent(
         captureGroups[index] || "",
         paramName
