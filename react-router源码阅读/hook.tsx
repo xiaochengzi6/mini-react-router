@@ -626,6 +626,7 @@ export function _renderMatches(
     let errorElement = dataRouterState
       ? match.route.errorElement || <DefaultErrorElement />
       : null;
+    // 这里不断的将 outlet 传入下一个，通过倒序遍历 [matches] 数组 使最外层路由依次包裹内层路由 
     let getChildren = () => (
       <RenderedRoute
         match={match}
