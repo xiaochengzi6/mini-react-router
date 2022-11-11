@@ -975,6 +975,7 @@ export function resolveTo(
 ): Path {
   let to: Partial<Path>;
   if (typeof toArg === "string") {
+    // 将 string 解析为 path 对象具有 {pathname, search, hash}
     to = parsePath(toArg);
   } else {
     to = { ...toArg };

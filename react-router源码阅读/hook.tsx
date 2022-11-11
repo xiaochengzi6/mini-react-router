@@ -161,16 +161,22 @@ export function useNavigate(): NavigateFunction {
     // router loaded. We can help them understand how to avoid that.
     `useNavigate() may be used only in the context of a <Router> component.`
   );
-
+  
+  // 拿出 根路径以及 history 对象
   let { basename, navigator } = React.useContext(NavigationContext);
+  // 渲染阶段往其传入的 matches 数组
   let { matches } = React.useContext(RouteContext);
+  // 拿到当前的 pathname (路径)
   let { pathname: locationPathname } = useLocation();
-
+  
+  // 找到当前 matches 路由 index === 0 和 path 存在的路由，返回其 pathnameBase
+  // 主要是想浅拷贝
   let routePathnamesJson = JSON.stringify(
     getPathContributingMatches(matches).map((match) => match.pathnameBase)
   );
 
   let activeRef = React.useRef(false);
+  // 确保 useNavigate() 的调用应该在 useEffect 阶段或者之后, 不能在渲染阶段进行
   React.useEffect(() => {
     activeRef.current = true;
   });
@@ -190,6 +196,7 @@ export function useNavigate(): NavigateFunction {
         return;
       }
 
+      //创建 path 
       let path = resolveTo(
         to,
         JSON.parse(routePathnamesJson),
@@ -207,7 +214,7 @@ export function useNavigate(): NavigateFunction {
             ? basename
             : joinPaths([basename, path.pathname]);
       }
-
+      // 选择模式， replace 替换 还是 push 添加
       (!!options.replace ? navigator.replace : navigator.push)(
         path,
         options.state,
