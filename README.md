@@ -2,22 +2,22 @@
 
 react-routerV6 版本提供一个多元的使用方式它结合 组件 + hook + react/router 的这种方式，非常灵活相对的就会造成在使用场景上需要结合文档去研究。
 
-## 入口
+## react-router
 react-router 可以简单分割为 `存储`、 `修改`、 `获取`这三个方向。
 
 ![](https://user-images.githubusercontent.com/63789659/201518066-b86c6983-23ea-47ce-8af2-deff2c6445b1.png)
 
-### 存储：状态(数据)存储于 `context` 中
+**存储：状态(数据)存储于 `context` 中**
 就拿 `<BrowserRouter />` 组件来说，它会位于根组件的位置，它会将 `history` 对象并且每一次 history 对象发生修改那就会响应的重新渲染以确保每一次都能获取最新的 `location` 对象 和 `action` 
 
 从源码的角度上看它将使用 `NavigationContext` 主要保存 history 对象， `LocationContext` 主要保存 location 对象方便对其操作
 
 在去修改路由之前还要介绍一下它的`匹配规则`，先制定`路由匹配规则`修改路由才能找到对应的`element`(这里的`element`的是匹配到路径才能去渲染的组件)它会将匹配到路径的对象都保存在 `RouteContext` 中，之后就可以对匹配到的数据进行处理
 
-### 修改: 改变 url 路径的变化
+**修改: 改变 url 路径的变化**
 `<Navigate />` 组件或者`useNavigate`可以去获取当前 location 对象然后去调用 `history` 对象的 `push` 或者 `replace` 然后去跳转路径 由于去调用的是 history 对象的方法 就会触发 lister 监听函数，从而会更新组件 然后开始找到对应匹配的`matchers`对象开始`渲染组件`。修改路径差不多都是这样的原理
 
-### 读取: 获取 url 改变后的状态
+**读取: 获取 url 改变后的状态**
 如何获取 `url` 的状态在 v6 版本中大多数都是使用 hooks 不再 props 中取值了，比如 `useLocation` 获得当前的 location 对象 或者 `useMatches` 获取当前匹配的 matches 对象 
 
 ## useRoutes 的源码分析
