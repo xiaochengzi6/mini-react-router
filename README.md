@@ -3,7 +3,9 @@
 react-routerV6 版本提供一个多元的使用方式它结合 组件 + hook + react/router 的这种方式，非常灵活相对的就会造成在使用场景上需要结合文档去研究。
 
 ## 入口
-react-router 可以简单分割为 `存储`、 `修改`、 `读取`这三个方向，
+react-router 可以简单分割为 `存储`、 `修改`、 `读取`这三个方向。
+
+![](https://user-images.githubusercontent.com/63789659/201518066-b86c6983-23ea-47ce-8af2-deff2c6445b1.png)
 
 ### 存储：状态(数据)存储于 `context` 中
 就拿 `<BrowserRouter />` 组件来说，它会位于根组件的位置，它会将 `history` 对象并且每一次 history 对象发生修改那就会响应的重新渲染以确保每一次都能获取最新的 `location` 对象 和 `action` 
