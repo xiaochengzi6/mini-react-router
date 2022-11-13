@@ -93,3 +93,7 @@ const route = { path, score: computeScore(path, route.index), routesMeta }
 ### 二、渲染阶段 [`_renderMatches` 函数]
 
 在渲染阶段主要就是将得到的 matches 数组去遍历，采用后序遍历的方式，将每一个 route 都包装上 `<RenderedRoute />` 组件并以 `outlet` 的形式返还给下一个 `<RenderedRoute />`组件 这样最外层的路由包裹着最内层的路由，形成了一个嵌套组件。
+
+
+#### 参考文章
+[掘金-React-Router v6 源码完全解读指南](https://juejin.cn/post/7067436563457638413#heading-22)
