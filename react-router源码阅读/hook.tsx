@@ -170,12 +170,14 @@ export function useNavigate(): NavigateFunction {
   let { pathname: locationPathname } = useLocation();
 
   // 获取一个浅拷贝的数组，该数组是过滤掉 indx !== 0 && 没有 path 的 matches 并且返回它们的 pathnameBase 
+
   let routePathnamesJson = JSON.stringify(
     getPathContributingMatches(matches).map((match) => match.pathnameBase)
   );
   
   // 确保能在 Effect 阶段去渲染
   let activeRef = React.useRef(false);
+  // 确保 useNavigate() 的调用应该在 useEffect 阶段或者之后, 不能在渲染阶段进行
   React.useEffect(() => {
     activeRef.current = true;
   });
@@ -195,7 +197,7 @@ export function useNavigate(): NavigateFunction {
         return;
       }
 
-      // 得出 path 对象
+      //创建 path 
       let path = resolveTo(
         // 跳转的 to
         to,
@@ -217,7 +219,7 @@ export function useNavigate(): NavigateFunction {
             ? basename
             : joinPaths([basename, path.pathname]);
       }
-
+      // 选择模式， replace 替换 还是 push 添加
       (!!options.replace ? navigator.replace : navigator.push)(
         path,
         options.state,
@@ -636,6 +638,7 @@ export function _renderMatches(
     let errorElement = dataRouterState
       ? match.route.errorElement || <DefaultErrorElement />
       : null;
+    // 这里不断的将 outlet 传入下一个，通过倒序遍历 [matches] 数组 使最外层路由依次包裹内层路由 
     let getChildren = () => (
       <RenderedRoute
         match={match}

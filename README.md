@@ -20,10 +20,14 @@ react-router 可以简单分割为 `存储`、 `修改`、 `读取`这三个方�
 
 ## useRoutes 的源码分析
 
-一、匹配阶段 [`matchRoutes` 函数]
+=======
+<img src="https://user-images.githubusercontent.com/63789659/201244704-28af8010-0a7c-43f4-923d-b968e56d55e6.png" alt="fg" style="zoom:200%;" />
+
+### 一、匹配阶段 [`matchRoutes` 函数]
 
 (1) `flattenRoutes` 函数主要做了那些事情？
 1.首先它会得到一个 `routes` 的对象，这个对象是你通过 `useRoutes`传入的或者是你使用 `<Routes />`和 `<Route />` 组件传入的，它是一种嵌套类型的对象，这种嵌套反映了路由的父子关系
+
 ~~~js
 {
   path: '/',
@@ -84,5 +88,6 @@ const route = { path, score: computeScore(path, route.index), routesMeta }
 (3) `matchRouteBranch` 函数
 这个函数会去遍历 `branches` 数组取出一个 branch 去遍历里面的 `routesMeta数组` 然后看看是否和传入的 `pathname` 是否相互匹配，不匹配就会直接返回进行下一个 branch 去匹配，直到找到一个 routesMeta 数组中所有的 meta 的path 都能和 `pathname` 匹配上就会返回一个 `matches` 数组，这个数组存有被包装过的 meta     
 
+### 二、渲染阶段 [`_renderMatches` 函数]
 
-二、渲染阶段 [`_renderMatches` 函数]
+在渲染阶段主要就是将得到的 matches 数组去遍历，采用后序遍历的方式，将每一个 route 都包装上 `<RenderedRoute />` 组件并以 `outlet` 的形式返还给下一个 `<RenderedRoute />`组件 这样最外层的路由包裹着最内层的路由，形成了一个嵌套组件。

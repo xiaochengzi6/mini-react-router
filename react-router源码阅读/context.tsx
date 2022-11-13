@@ -113,9 +113,9 @@ export interface Navigator {
 }
 
 interface NavigationContextObject {
-  basename: string;
-  navigator: Navigator;
-  static: boolean;
+  basename: string; // 根路径
+  navigator: Navigator; // 存储的 history 
+  static: boolean; // 静态路由？
 }
 
 export const NavigationContext = React.createContext<NavigationContextObject>(
