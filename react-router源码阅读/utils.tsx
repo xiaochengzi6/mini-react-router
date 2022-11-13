@@ -889,7 +889,11 @@ export function resolvePath(to: To, fromPathname = "/"): Path {
 
   let pathname = toPathname
     ? toPathname.startsWith("/")
+      // 一般的用法就是 path="foo"
+      // 直接从当前的位置跳转到 foo 
       ? toPathname
+      // 判断 to 是否是 / 开头 也就是说 path="/foo/bar" 类似于这种要先去
+      // 和 form 路径组装后再去跳转
       : resolvePathname(toPathname, fromPathname)
     : fromPathname;
 
@@ -900,19 +904,26 @@ export function resolvePath(to: To, fromPathname = "/"): Path {
   };
 }
 
+// 该函数主要是将传入的 to 和 form 解析为数组再遍历 to 数组
+// 如果里面存在 .. 就要删除 form 的最后一个
+// 如果不是 '.' 就会往 form 中添加最后再转化为字符串返回
 function resolvePathname(relativePath: string, fromPathname: string): string {
+  // 除去 formPathname 中最后一个 '/'，切割成数组
   let segments = fromPathname.replace(/\/+$/, "").split("/");
+  // 将 relativePath 字符串按照 '/' 切割为数组
   let relativeSegments = relativePath.split("/");
 
   relativeSegments.forEach((segment) => {
     if (segment === "..") {
       // Keep the root "" segment so the pathname starts at /
+      // 如果出现了 '..' 那就会使 formPathname 少一个路径也就是往前移动
       if (segments.length > 1) segments.pop();
     } else if (segment !== ".") {
+      // 不是点就会往其添加元素
       segments.push(segment);
     }
   });
-
+  // 最后再返回该字符串 
   return segments.length > 1 ? segments.join("/") : "/";
 }
 
@@ -955,6 +966,7 @@ function getInvalidPathError(
  *     </Route>
  *   </Route>
  */
+// 获取 匹配的路径并要过滤掉 index !== 0 的 && route.path 没有的
 export function getPathContributingMatches<
   T extends AgnosticRouteMatch = AgnosticRouteMatch
 >(matches: T[]) {
@@ -974,25 +986,30 @@ export function resolveTo(
   isPathRelative = false
 ): Path {
   let to: Partial<Path>;
+  // 将 to 改成 path 对象 {pathname, search, hash}
   if (typeof toArg === "string") {
     to = parsePath(toArg);
   } else {
     to = { ...toArg };
-
+    // 如果pathname有 ?
     invariant(
       !to.pathname || !to.pathname.includes("?"),
       getInvalidPathError("?", "pathname", "search", to)
     );
+    // 如果pathname有 # 
     invariant(
       !to.pathname || !to.pathname.includes("#"),
       getInvalidPathError("#", "pathname", "hash", to)
     );
+    // 如果search有 # 
     invariant(
       !to.search || !to.search.includes("#"),
       getInvalidPathError("#", "search", "hash", to)
     );
+    // 那就会报错
   }
 
+  // 判断是否为空
   let isEmptyPath = toArg === "" || to.pathname === "";
   let toPathname = isEmptyPath ? "/" : to.pathname;
 
@@ -1007,11 +1024,16 @@ export function resolveTo(
   // `to` values that do not provide a pathname. `to` can simply be a search or
   // hash string, in which case we should assume that the navigation is relative
   // to the current location's pathname and *not* the route pathname.
+
+  // 判断是否具有相关性， 
   if (isPathRelative || toPathname == null) {
+    // from 将等于当前的 location 的pathname
     from = locationPathname;
   } else {
+    // 这里存储着父路径的长度
     let routePathnameIndex = routePathnames.length - 1;
 
+    // 如果当前路径为 '..' 
     if (toPathname.startsWith("..")) {
       let toSegments = toPathname.split("/");
 
@@ -1020,29 +1042,39 @@ export function resolveTo(
       // major reason we call this a "to" value instead of a "href".
       while (toSegments[0] === "..") {
         toSegments.shift();
+        // 使当前的 form = 当前 mathes 匹配父路径中倒数第二位
         routePathnameIndex -= 1;
       }
-
+      // 将 '..' 从路径中删除后重新化为 path 路径
       to.pathname = toSegments.join("/");
     }
 
     // If there are more ".." segments than parent routes, resolve relative to
     // the root / URL.
+    // 开始指定 form 
     from = routePathnameIndex >= 0 ? routePathnames[routePathnameIndex] : "/";
   }
 
+  // 根据 to 和 from 中的规则去获得到 path 对象
+  // 1. to 出现 '..' 就要让的 form 删除最后一位
+  // 2. to 的开头是 '/' 就要去结合 form 的路径与to拼接一下
+  // 返回一个 {pathname, search, hash} 对象 
   let path = resolvePath(to, from);
 
   // Ensure the pathname has a trailing slash if the original "to" had one
+  // 如果topathnam最后是以 / 结尾
   let hasExplicitTrailingSlash =
     toPathname && toPathname !== "/" && toPathname.endsWith("/");
   // Or if this was a link to the current path which has a trailing slash
   let hasCurrentTrailingSlash =
     (isEmptyPath || toPathname === ".") && locationPathname.endsWith("/");
-  if (
+  
+    if (
     !path.pathname.endsWith("/") &&
+    // 如果是以 / 结尾或者 topathname 是 '.' 并且 当前的locationpathname 以 '/' 结尾
     (hasExplicitTrailingSlash || hasCurrentTrailingSlash)
   ) {
+    // 那就再原来的 path 上加上 '/'
     path.pathname += "/";
   }
 
@@ -1077,6 +1109,7 @@ export const normalizePathname = (pathname: string): string =>
 /**
  * @private
  */
+// 去除字符串的 ? 号
 export const normalizeSearch = (search: string): string =>
   !search || search === "?"
     ? ""

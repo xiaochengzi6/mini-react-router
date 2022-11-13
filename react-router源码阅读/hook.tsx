@@ -162,14 +162,19 @@ export function useNavigate(): NavigateFunction {
     `useNavigate() may be used only in the context of a <Router> component.`
   );
 
+  // 获取 根路径 && history 对象
   let { basename, navigator } = React.useContext(NavigationContext);
+  // 获取于当前路径匹配的 mathes 
   let { matches } = React.useContext(RouteContext);
+  // 取出 pathname
   let { pathname: locationPathname } = useLocation();
 
+  // 获取一个浅拷贝的数组，该数组是过滤掉 indx !== 0 && 没有 path 的 matches 并且返回它们的 pathnameBase 
   let routePathnamesJson = JSON.stringify(
     getPathContributingMatches(matches).map((match) => match.pathnameBase)
   );
-
+  
+  // 确保能在 Effect 阶段去渲染
   let activeRef = React.useRef(false);
   React.useEffect(() => {
     activeRef.current = true;
@@ -190,9 +195,13 @@ export function useNavigate(): NavigateFunction {
         return;
       }
 
+      // 得出 path 对象
       let path = resolveTo(
+        // 跳转的 to
         to,
+        // 当前mathes的父路径得出 from (可以看作 form) 
         JSON.parse(routePathnamesJson),
+        // 当前location路径
         locationPathname,
         options.relative === "path"
       );
@@ -201,6 +210,7 @@ export function useNavigate(): NavigateFunction {
       // to handing off to history.  If this is a root navigation, then we
       // navigate to the raw basename which allows the basename to have full
       // control over the presence of a trailing slash on root links
+      // 拼凑出完整的路径
       if (basename !== "/") {
         path.pathname =
           path.pathname === "/"

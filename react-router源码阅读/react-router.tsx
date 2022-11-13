@@ -157,9 +157,13 @@ export function MemoryRouter({
 }
 
 export interface NavigateProps {
+  // 可以传入数字和路径使其跳转
   to: To;
+  // 是否替换
   replace?: boolean;
+  // state 状态
   state?: any;
+  
   relative?: RelativeRoutingType;
 }
 
