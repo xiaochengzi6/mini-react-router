@@ -373,7 +373,8 @@ export function useRoutes(
         `path="${parentPath === "/" ? "*" : `${parentPath}/*`}">.`
     );
   }
-
+  
+  // 取出当前 location
   let locationFromContext = useLocation();
 
   let location;
@@ -401,6 +402,7 @@ export function useRoutes(
   let pathname = location.pathname || "/";
 
   // 获得当前路由的路径[本次 routes 要匹配的 pathname]
+  // 去掉父路径
   let remainingPathname =
     parentPathnameBase === "/"
       ? pathname

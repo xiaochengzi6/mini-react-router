@@ -563,6 +563,7 @@ export function createRouter(init: RouterInit): Router {
     init.history.location,
     init.basename
   );
+  
   let initialErrors: RouteData | null = null;
 
   if (initialMatches == null) {
